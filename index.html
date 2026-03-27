@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Spark — AI Platform</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --sidebar: #111118;
+  --card: #1a1a26;
+  --border: #2a2a3a;
+  --text: #f0f0ff;
+  --muted: #8080a0;
+  --purple: #7c3aed;
+  --blue: #3b82f6;
+  --grad: linear-gradient(135deg, #7c3aed, #3b82f6);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  background: var(--bg); color: var(--text); 
+  font-family: 'Inter', sans-serif; height: 100vh; 
+  display: flex; flex-direction: column; overflow: hidden;
+}
+/* NAV */
+.top-nav {
+  height: 56px; background: rgba(17,17,24,0.8); 
+  backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+}
+.logo { font-size: 20px; font-weight: 700; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.model-select {
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  margin-left: auto;
+}
+.credits { font-size: 13px; color: var(--muted); padding: 6px 12px; background: var(--card); border-radius: 8px; border: 1px solid var(--border); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; }
+/* LAYOUT */
+.app-body {
+  display: flex; flex: 1; margin-top: 56px; height: calc(100vh - 56px); overflow: hidden;
+}
+/* LEFT SIDEBAR */
+.sidebar-left {
+  width: 260px; background: var(--sidebar); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 16px 12px; overflow-y: auto; flex-shrink: 0;
+}
+.new-chat-btn {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 20px;
+  transition: all 0.2s;
+}
+.new-chat-btn:hover { border-color: var(--purple); background: rgba(124,58,237,0.1); }
+.history-group { margin-bottom: 16px; }
+.history-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 0 8px; margin-bottom: 6px; }
+.history-item {
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: all 0.15s;
+}
+.history-item:hover { background: var(--card); color: var(--text); }
+.history-item.active { background: rgba(124,58,237,0.15); color: var(--text); }
+/* MAIN */
+.main-area {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
+}
+.messages-container {
+  flex: 1; overflow-y: auto; padding: 24px 60px 140px; display: flex; flex-direction: column; gap: 24px;
+}
+.messages-container::-webkit-scrollbar { width: 4px; }
+.messages-container::-webkit-scrollbar-track { background: transparent; }
+.messages-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* WELCOME */
+.welcome-screen {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 32px; padding: 40px; text-align: center;
+}
+.welcome-title { font-size: 36px; font-weight: 700; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.welcome-sub { font-size: 16px; color: var(--muted); }
+.chips-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.chip {
+  padding: 10px 18px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; color: var(--text);
+}
+.chip:hover { border-color: var(--purple); background: rgba(124,58,237,0.1); }
+/* MESSAGES */
+.msg { display: flex; gap: 12px; max-width: 100%; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+.msg.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.msg.ai .msg-avatar { background: var(--grad); }
+.msg.user .msg-avatar { background: linear-gradient(135deg, #0f4c81, #1d6fa4); }
+.msg-bubble {
+  max-width: 75%; padding: 14px 18px; border-radius: 16px; font-size: 14px; line-height: 1.6;
+}
+.msg.ai .msg-bubble { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px 16px 16px 16px; }
+.msg.user .msg-bubble { background: var(--grad); color: #fff; border-radius: 16px 4px 16px 16px; }
+/* TYPING */
+.typing-dots { display: flex; gap: 4px; padding: 6px 0; }
+.typing-dots span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+/* OUTPUT CARDS */
+.output-area {
+  border-top: 1px solid var(--border); background: var(--sidebar); padding: 0;
+  max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+}
+.output-area.visible { max-height: 400px; }
+.output-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.output-tab {
+  padding: 10px 20px; font-size: 13px; cursor: pointer; color: var(--muted);
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.output-tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+.output-panel { display: none; padding: 16px; overflow: auto; max-height: 340px; }
+.output-panel.active { display: block; }
+/* SLIDES */
+.slides-deck { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.slide-card {
+  min-width: 200px; height: 130px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; flex-shrink: 0; cursor: pointer; transition: all 0.2s;
+}
+.slide-card:hover { border-color: var(--purple); }
+.slide-num { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.slide-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.slide-bullets li { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+/* SHEETS */
+.sheet-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sheet-table th { background: var(--card); padding: 8px 12px; text-align: left; border: 1px solid var(--border); font-weight: 600; }
+.sheet-table td { padding: 7px 12px; border: 1px solid var(--border); color: var(--muted); }
+.sheet-table tr:hover td { background: rgba(124,58,237,0.05); }
+/* IMAGES */
+.image-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.image-card { aspect-ratio: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; }
+/* SPARKPAGE */
+.sparkpage-preview { width: 100%; height: 300px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+/* INPUT */
+.input-area {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 16px 60px; background: linear-gradient(transparent, var(--bg) 40%);
+}
+.input-wrapper {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  transition: border-color 0.2s; overflow: hidden;
+}
+.input-wrapper:focus-within { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.input-textarea {
+  width: 100%; background: transparent; border: none; outline: none; color: var(--text);
+  font-family: 'Inter', sans-serif; font-size: 14px; resize: none; padding: 14px 16px;
+  min-height: 52px; max-height: 200px;
+}
+.input-toolbar {
+  display: flex; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border);
+  gap: 8px;
+}
+.tool-pill {
+  padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); font-size: 12px; cursor: pointer; transition: all 0.15s;
+}
+.tool-pill:hover { border-color: var(--purple); color: var(--text); }
+.send-btn {
+  margin-left: auto; padding: 7px 16px; background: var(--grad); border: none;
+  color: white; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.send-btn:hover { opacity: 0.85; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* RIGHT SIDEBAR */
+.sidebar-right {
+  width: 240px; background: var(--sidebar); border-left: 1px solid var(--border);
+  padding: 20px 12px; flex-shrink: 0;
+}
+.tools-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; padding: 0 4px; }
+.tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool-btn {
+  padding: 16px 8px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 12px; color: var(--muted);
+}
+.tool-btn:hover { border-color: var(--purple); background: rgba(124,58,237,0.1); color: var(--text); }
+.tool-btn .tool-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+.tool-btn.active { border-color: var(--purple); background: rgba(124,58,237,0.15); color: var(--text); }
+.tool-divider { height: 1px; background: var(--border); margin: 16px 0; }
+.benchmark-btn {
+  width: 100%; padding: 10px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+  color: var(--blue); border-radius: 10px; font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.benchmark-btn:hover { background: rgba(59,130,246,0.2); }
+/* MISC */
+.hidden { display: none !important; }
+a { color: var(--blue); text-decoration: none; }
+code { background: rgba(124,58,237,0.2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+pre { background: #0d0d18; padding: 16px; border-radius: 10px; overflow-x: auto; border: 1px solid var(--border); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="logo">⚡ Spark</div>
+  <select class="model-select" id="modelSelect">
+    <option value="groq-70b">Llama 3.3 70B (Free)</option>
+    <option value="claude-haiku">Claude Haiku</option>
+    <option value="groq-8b">Llama 8B (Fast)</option>
+  </select>
+  <div class="credits">💎 1,250</div>
+  <div class="avatar">M</div>
+</nav>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar-left">
+    <button class="new-chat-btn" onclick="newChat()">
+      <span>✏️</span> <span>New Chat</span>
+    </button>
+    <div id="historyContainer"></div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main-area">
+
+    <!-- WELCOME SCREEN -->
+    <div class="welcome-screen" id="welcomeScreen">
+      <div>
+        <h1 class="welcome-title">What can I help you with?</h1>
+        <p class="welcome-sub" style="margin-top:8px">Powered by Groq · 100% free · Unlimited</p>
+      </div>
+      <div class="chips-row">
+        <div class="chip" onclick="fillInput('Research the latest trends in artificial intelligence')">🔍 Research topic</div>
+        <div class="chip" onclick="fillInput('Create a 10-slide presentation about climate change')">📊 Create slides</div>
+        <div class="chip" onclick="fillInput('Generate a data table comparing top AI models by cost and performance')">📋 Analyze data</div>
+        <div class="chip" onclick="fillInput('Build a landing page for a SaaS startup called TechFlow')">⚡ SparkPage</div>
+        <div class="chip" onclick="fillInput('Generate an image of a futuristic city at sunset')">🎨 Generate image</div>
+        <div class="chip" onclick="fillInput('Write Python code to scrape and analyze Twitter trends')">💻 Write code</div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="messages-container hidden" id="messagesContainer"></div>
+
+    <!-- OUTPUT AREA -->
+    <div class="output-area" id="outputArea">
+      <div class="output-tabs">
+        <div class="output-tab active" onclick="showTab('slides')">📊 Slides</div>
+        <div class="output-tab" onclick="showTab('sheets')">📋 Sheets</div>
+        <div class="output-tab" onclick="showTab('images')">🎨 Images</div>
+        <div class="output-tab" onclick="showTab('sparkpage')">⚡ SparkPage</div>
+        <div class="output-tab" onclick="showTab('benchmark')">📈 Benchmark</div>
+      </div>
+      <div class="output-panel active" id="panel-slides"></div>
+      <div class="output-panel" id="panel-sheets"></div>
+      <div class="output-panel" id="panel-images"></div>
+      <div class="output-panel" id="panel-sparkpage"></div>
+      <div class="output-panel" id="panel-benchmark"></div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea class="input-textarea" id="userInput" placeholder="Ask anything... (Ctrl+Enter to send)"
+          onkeydown="handleKey(event)" oninput="autoResize(this)" rows="1"></textarea>
+        <div class="input-toolbar">
+          <button class="tool-pill" onclick="triggerSlides()">📊 Slides</button>
+          <button class="tool-pill" onclick="triggerSheets()">📋 Sheets</button>
+          <button class="tool-pill" onclick="triggerImage()">🎨 Image</button>
+          <button class="tool-pill" onclick="triggerSparkPage()">⚡ SparkPage</button>
+          <button class="tool-pill" onclick="triggerSearch()">🔍 Search</button>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send ↑</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT SIDEBAR -->
+  <aside class="sidebar-right">
+    <div class="tools-title">AI Tools</div>
+    <div class="tools-grid">
+      <div class="tool-btn" onclick="triggerSlides()"><span class="tool-icon">📊</span>Slides</div>
+      <div class="tool-btn" onclick="triggerSheets()"><span class="tool-icon">📋</span>Sheets</div>
+      <div class="tool-btn" onclick="triggerImage()"><span class="tool-icon">🎨</span>Images</div>
+      <div class="tool-btn" onclick="triggerSparkPage()"><span class="tool-icon">⚡</span>SparkPage</div>
+      <div class="tool-btn" onclick="triggerSearch()"><span class="tool-icon">🔍</span>Search</div>
+      <div class="tool-btn" onclick="triggerVideo()"><span class="tool-icon">🎬</span>Video</div>
+      <div class="tool-btn" onclick="triggerAgent()"><span class="tool-icon">🤖</span>Agent</div>
+      <div class="tool-btn" onclick="triggerMixtape()"><span class="tool-icon">🎵</span>Mixtape</div>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tools-title">Benchmark</div>
+    <button class="benchmark-btn" onclick="runBenchmark()">⚡ vs Official Genspark</button>
+    <div style="margin-top:16px" id="benchmarkResult"></div>
+  </aside>
+</div>
+
+<script>
+const API = "https://genspark-worker.maciej-koziej01.workers.dev";
+let sessions = JSON.parse(localStorage.getItem("spark_sessions") || "[]");
+let currentSession = null;
+let isLoading = false;
+
+// ── INIT ─────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  renderHistory();
+  if (sessions.length > 0) {
+    loadSession(sessions[0].id);
+  }
+});
+
+// ── HISTORY ──────────────────────────────────────────────────────
+function renderHistory() {
+  const c = document.getElementById("historyContainer");
+  if (sessions.length === 0) {
+    c.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No conversations yet</div>';
+    return;
+  }
+  const today = [], week = [], older = [];
+  const now = Date.now();
+  sessions.forEach(s => {
+    const age = now - s.ts;
+    if (age < 864e5) today.push(s);
+    else if (age < 6048e5) week.push(s);
+    else older.push(s);
+  });
+  let html = "";
+  if (today.length) html += group("Today", today);
+  if (week.length) html += group("Last 7 days", week);
+  if (older.length) html += group("Older", older);
+  c.innerHTML = html;
+}
+
+function group(label, items) {
+  return `<div class="history-group">
+    <div class="history-label">${label}</div>
+    ${items.map(s => `<div class="history-item ${s.id === currentSession?.id ? 'active' : ''}" onclick="loadSession('${s.id}')">${s.title}</div>`).join("")}
+  </div>`;
+}
+
+function newChat() {
+  currentSession = null;
+  document.getElementById("welcomeScreen").classList.remove("hidden");
+  document.getElementById("messagesContainer").classList.add("hidden");
+  document.getElementById("messagesContainer").innerHTML = "";
+  hideOutput();
+  renderHistory();
+}
+
+function loadSession(id) {
+  const s = sessions.find(x => x.id === id);
+  if (!s) return;
+  currentSession = s;
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  const mc = document.getElementById("messagesContainer");
+  mc.classList.remove("hidden");
+  mc.innerHTML = "";
+  s.messages.forEach(m => appendMessage(m.role, m.content, false));
+  mc.scrollTop = mc.scrollHeight;
+  renderHistory();
+}
+
+function saveSession(userMsg, aiMsg) {
+  if (!currentSession) {
+    currentSession = {
+      id: "s" + Date.now(),
+      title: userMsg.slice(0, 50),
+      ts: Date.now(),
+      messages: []
+    };
+    sessions.unshift(currentSession);
+  }
+  currentSession.messages.push({ role: "user", content: userMsg });
+  currentSession.messages.push({ role: "ai", content: aiMsg });
+  currentSession.ts = Date.now();
+  localStorage.setItem("spark_sessions", JSON.stringify(sessions.slice(0, 50)));
+  renderHistory();
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────
+function appendMessage(role, content, animate = true) {
+  const mc = document.getElementById("messagesContainer");
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  const formatted = formatContent(content);
+  div.innerHTML = `
+    <div class="msg-avatar">${role === "ai" ? "⚡" : "M"}</div>
+    <div class="msg-bubble">${formatted}</div>`;
+  if (animate) div.style.opacity = "0";
+  mc.appendChild(div);
+  if (animate) {
+    requestAnimationFrame(() => { div.style.opacity = "1"; });
+  }
+  mc.scrollTop = mc.scrollHeight;
+  return div;
+}
+
+function formatContent(text) {
+  // Basic markdown
+  text = text.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  text = text.replace(/^## (.+)$/gm, '<h3 style="font-size:15px;font-weight:700;margin:12px 0 6px">$1</h3>');
+  text = text.replace(/^### (.+)$/gm, '<h4 style="font-size:14px;font-weight:600;margin:10px 0 4px">$1</h4>');
+  text = text.replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:8px">$1</li>');
+  text = text.replace(/(<li.*<\/li>\n?)+/g, '<ul style="list-style:disc;padding-left:20px;margin:8px 0">$&</ul>');
+  text = text.replace(/\n\n/g, '<br><br>');
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+
+function showTyping() {
+  const mc = document.getElementById("messagesContainer");
+  const div = document.createElement("div");
+  div.className = "msg ai";
+  div.id = "typing-indicator";
+  div.innerHTML = `<div class="msg-avatar">⚡</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  mc.appendChild(div);
+  mc.scrollTop = mc.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById("typing-indicator");
+  if (t) t.remove();
+}
+
+// ── SEND MESSAGE ─────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById("userInput");
+  const msg = input.value.trim();
+  if (!msg || isLoading) return;
+  
+  input.value = "";
+  input.style.height = "auto";
+  isLoading = true;
+  document.getElementById("sendBtn").disabled = true;
+  
+  // Show chat area
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  
+  appendMessage("user", msg);
+  showTyping();
+  
+  try {
+    const res = await fetch(`${API}/v1/chat`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ message: msg, model: document.getElementById("modelSelect").value })
+    });
+    const data = await res.json();
+    hideTyping();
+    const aiMsg = data.content || "Sorry, I couldn't generate a response.";
+    appendMessage("ai", aiMsg);
+    saveSession(msg, aiMsg);
+    
+    // Auto-detect output type
+    const lm = msg.toLowerCase();
+    if (lm.includes("slide") || lm.includes("presentation") || lm.includes("deck")) {
+      setTimeout(() => triggerSlidesAuto(msg), 500);
+    } else if (lm.includes("table") || lm.includes("sheet") || lm.includes("spreadsheet") || lm.includes("data")) {
+      setTimeout(() => triggerSheetsAuto(msg), 500);
+    } else if (lm.includes("image") || lm.includes("picture") || lm.includes("photo") || lm.includes("generate")) {
+      setTimeout(() => triggerImageAuto(msg), 500);
+    } else if (lm.includes("page") || lm.includes("website") || lm.includes("landing") || lm.includes("html")) {
+      setTimeout(() => triggerSparkPageAuto(msg), 500);
+    }
+  } catch(e) {
+    hideTyping();
+    appendMessage("ai", "⚠️ Connection error. Please try again.");
+  } finally {
+    isLoading = false;
+    document.getElementById("sendBtn").disabled = false;
+  }
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === "Escape") { document.getElementById("userInput").value = ""; }
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+}
+
+function fillInput(text) {
+  document.getElementById("userInput").value = text;
+  document.getElementById("userInput").focus();
+}
+
+// ── OUTPUT TABS ───────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll(".output-tab").forEach((t, i) => {
+    const tabs = ["slides","sheets","images","sparkpage","benchmark"];
+    t.classList.toggle("active", tabs[i] === name);
+  });
+  document.querySelectorAll(".output-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById(`panel-${name}`).classList.add("active");
+}
+
+function showOutput() {
+  document.getElementById("outputArea").classList.add("visible");
+}
+
+function hideOutput() {
+  document.getElementById("outputArea").classList.remove("visible");
+}
+
+// ── SLIDES ────────────────────────────────────────────────────────
+async function triggerSlides() {
+  const prompt = document.getElementById("userInput").value.trim() || "Create a presentation about AI in 2025";
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `📊 Create slides: ${prompt}`);
+  showTyping();
+  await triggerSlidesAuto(prompt);
+}
+
+async function triggerSlidesAuto(prompt) {
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/slides/generate`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt, slide_count: 8 })
+    });
+    const data = await res.json();
+    hideTyping();
+    appendMessage("ai", `Generated **${data.slide_count || 0} slides**: *${data.title || prompt}*\n\nScroll the slide deck below 👇`);
+    renderSlides(data);
+    showTab("slides");
+    showOutput();
+  } catch(e) { hideTyping(); appendMessage("ai", "Failed to generate slides."); }
+}
+
+function renderSlides(data) {
+  const panel = document.getElementById("panel-slides");
+  const slides = data.slides || [];
+  panel.innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">${data.title || "Presentation"} · ${slides.length} slides</div>
+    <div class="slides-deck">
+      ${slides.map((s, i) => `
+        <div class="slide-card" onclick="expandSlide(${i})">
+          <div class="slide-num">Slide ${s.index || i+1}</div>
+          <div class="slide-title">${s.title || "Slide"}</div>
+          <ul class="slide-bullets">
+            ${(s.content || []).slice(0,3).map(b => `<li>${b}</li>`).join("")}
+          </ul>
+        </div>`).join("")}
+    </div>
+    <div id="slideExpand" style="display:none;margin-top:16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border)"></div>`;
+  window._slides = slides;
+}
+
+function expandSlide(i) {
+  const s = window._slides[i];
+  if (!s) return;
+  const el = document.getElementById("slideExpand");
+  el.style.display = "block";
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--muted)">Slide ${s.index || i+1}</div>
+    <h3 style="font-size:18px;font-weight:700;margin:8px 0 12px">${s.title}</h3>
+    <ul style="list-style:disc;padding-left:20px;font-size:14px;color:#c0c0d0">
+      ${(s.content || []).map(b => `<li style="margin-bottom:6px">${b}</li>`).join("")}
+    </ul>
+    ${s.speaker_notes ? `<div style="margin-top:12px;padding:10px;background:#0d0d18;border-radius:8px;font-size:12px;color:var(--muted)">📝 ${s.speaker_notes}</div>` : ""}`;
+}
+
+// ── SHEETS ────────────────────────────────────────────────────────
+async function triggerSheets() {
+  const prompt = document.getElementById("userInput").value.trim() || "Compare top 10 AI models by price, speed, and capability";
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `📋 Create sheet: ${prompt}`);
+  await triggerSheetsAuto(prompt);
+}
+
+async function triggerSheetsAuto(prompt) {
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/sheets/generate`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    hideTyping();
+    appendMessage("ai", `Generated spreadsheet: **${data.title || prompt}**\n\n${(data.rows || []).length} rows · ${(data.headers || []).length} columns`);
+    renderSheets(data);
+    showTab("sheets");
+    showOutput();
+  } catch(e) { hideTyping(); appendMessage("ai", "Failed to generate sheet."); }
+}
+
+function renderSheets(data) {
+  const panel = document.getElementById("panel-sheets");
+  const headers = data.headers || [];
+  const rows = data.rows || [];
+  panel.innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">${data.title || "Spreadsheet"} · ${rows.length} rows</div>
+    <div style="overflow-x:auto">
+      <table class="sheet-table">
+        <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map(r => `<tr>${(Array.isArray(r) ? r : Object.values(r)).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── IMAGES ────────────────────────────────────────────────────────
+async function triggerImage() {
+  const prompt = document.getElementById("userInput").value.trim() || "A futuristic AI city at sunset, cinematic";
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `🎨 Generate image: ${prompt}`);
+  await triggerImageAuto(prompt);
+}
+
+async function triggerImageAuto(prompt) {
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/images/generate`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt, model: "flux-schnell" })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (data.url) {
+      appendMessage("ai", `🎨 Generated image for: *${prompt}*`);
+      document.getElementById("panel-images").innerHTML = `
+        <img src="${data.url}" style="max-width:100%;border-radius:12px;border:1px solid var(--border)" alt="${prompt}">`;
+      showTab("images");
+      showOutput();
+    } else {
+      appendMessage("ai", "Image generation requires TOGETHER_KEY or FAL_KEY. Add it to boost image capabilities! The chat and text features work perfectly.");
+    }
+  } catch(e) { hideTyping(); appendMessage("ai", "Image generation unavailable."); }
+}
+
+// ── SPARKPAGE ─────────────────────────────────────────────────────
+async function triggerSparkPage() {
+  const prompt = document.getElementById("userInput").value.trim() || "A landing page for AI SaaS startup";
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `⚡ Create SparkPage: ${prompt}`);
+  await triggerSparkPageAuto(prompt);
+}
+
+async function triggerSparkPageAuto(prompt) {
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/sparkpages/generate`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt, title: prompt.slice(0, 60) })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (data.html) {
+      appendMessage("ai", `⚡ SparkPage created: **${data.title}**\nPublic URL: ${data.public_url}\n\nPreview below 👇`);
+      const clean = data.html.replace(/```html|```/g, "").trim();
+      const blob = new Blob([clean], {type: "text/html"});
+      const url = URL.createObjectURL(blob);
+      document.getElementById("panel-sparkpage").innerHTML = `
+        <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center">
+          <a href="${url}" target="_blank" style="font-size:12px;color:var(--blue)">🔗 Open in new tab</a>
+        </div>
+        <iframe src="${url}" class="sparkpage-preview" sandbox="allow-scripts allow-same-origin"></iframe>`;
+      showTab("sparkpage");
+      showOutput();
+    }
+  } catch(e) { hideTyping(); appendMessage("ai", "SparkPage generation failed."); }
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────
+async function triggerSearch() {
+  const q = document.getElementById("userInput").value.trim();
+  if (!q) { fillInput("Search: "); document.getElementById("userInput").focus(); return; }
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `🔍 Search: ${q}`);
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    hideTyping();
+    const results = data.results || [];
+    const summary = results.map(r => `**${r.title}**\n${r.content}`).join("\n\n---\n\n");
+    appendMessage("ai", summary || "No results found.");
+  } catch(e) { hideTyping(); appendMessage("ai", "Search failed."); }
+}
+
+// ── VIDEO ─────────────────────────────────────────────────────────
+async function triggerVideo() {
+  const prompt = document.getElementById("userInput").value.trim() || "A timelapse of a futuristic city";
+  fillInput("");
+  appendMessage("user", `🎬 Generate video: ${prompt}`);
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/videos/generate`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt, model: "kling-v2" })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (data.url) {
+      appendMessage("ai", `🎬 Video ready: [Watch video](${data.url})`);
+    } else {
+      appendMessage("ai", "🎬 Video generation requires FAL_KEY. Add it to enable Kling V2, Runway Gen4, and Luma Dream Machine.");
+    }
+  } catch(e) { hideTyping(); appendMessage("ai", "Video generation unavailable."); }
+}
+
+// ── AGENT ─────────────────────────────────────────────────────────
+async function triggerAgent() {
+  const task = document.getElementById("userInput").value.trim() || "Research the best AI tools for developers in 2025, create a slide deck and data table";
+  fillInput("");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `🤖 Agent task: ${task}`);
+  appendMessage("ai", "🤖 Starting Super Agent...\n\nI'll research, synthesize, and create outputs for you.");
+  
+  // Run multiple in parallel
+  await Promise.all([
+    triggerSlidesAuto(task),
+    triggerSheetsAuto(`Data table for: ${task}`)
+  ]);
+}
+
+// ── MIXTAPE ───────────────────────────────────────────────────────
+async function triggerMixtape() {
+  appendMessage("ai", "🎵 **Mixtape** - AI Playlist Generator\n\nGenerating playlist recommendations...");
+  showTyping();
+  try {
+    const res = await fetch(`${API}/v1/chat`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ message: "Create a curated playlist of 10 songs for focused deep work. Include: artist, song name, BPM, mood. Format as a list." })
+    });
+    const data = await res.json();
+    hideTyping();
+    appendMessage("ai", data.content);
+  } catch(e) { hideTyping(); }
+}
+
+// ── BENCHMARK ─────────────────────────────────────────────────────
+async function runBenchmark() {
+  const task = document.getElementById("userInput").value.trim() || "Write a Python function to implement binary search with examples";
+  const btn = document.querySelector(".benchmark-btn");
+  btn.textContent = "⏳ Running...";
+  btn.disabled = true;
+  
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("messagesContainer").classList.remove("hidden");
+  appendMessage("user", `📈 Benchmark: "${task}"`);
+  showTyping();
+  
+  try {
+    const res = await fetch(`${API}/v1/benchmark/run`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ task })
+    });
+    const data = await res.json();
+    hideTyping();
+    
+    const winnerText = data.blind_winner === "clone" ? "⚡ Spark wins!" : data.blind_winner === "official" ? "Official wins" : "🤝 Tie";
+    appendMessage("ai", `📈 **Benchmark Results**\n\nTask: *${data.task}*\n\n⚡ Spark time: **${data.clone_time_ms}ms**\n\nWinner: **${winnerText}**\n\n${data.reasoning || ""}\n\n**Spark Output:**\n${data.clone_result}`);
+    
+    const bResult = document.getElementById("benchmarkResult");
+    bResult.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">${data.blind_winner === "clone" ? "⚡" : "🤝"}</div>
+        <div style="color:var(--text);font-weight:600">${winnerText}</div>
+        <div>${data.clone_time_ms}ms response</div>
+      </div>`;
+    
+    showTab("benchmark");
+    showOutput();
+    document.getElementById("panel-benchmark").innerHTML = `
+      <div style="padding:8px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">${winnerText}</div>
+        <div style="font-size:12px;color:var(--muted)">${data.reasoning || "Benchmark complete"}</div>
+        <pre style="margin-top:12px;font-size:12px">${data.clone_result}</pre>
+      </div>`;
+  } catch(e) {
+    hideTyping();
+    appendMessage("ai", "Benchmark failed.");
+  } finally {
+    btn.textContent = "⚡ vs Official Genspark";
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
